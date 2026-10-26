@@ -14,25 +14,23 @@ import {
   Loader2,
   Send,
 } from "lucide-react";
-// Datos de prueba iniciales sin api
-// Datos de prueba iniciales
-export default function Dashboard({ activePage, user }) {
-  // --- ESTADOS PRINCIPALES DE CITAS ---
-  const [citas, setCitas] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // --- FILTROS ---
+export default function Dashboard({ activePage, user }) {
+  // --- MÓDULO DE CITAS ---
+  const [citas, setCitas] = useState([]);
+  const [loadingCitas, setLoadingCitas] = useState(false);
+
+  // Filtros Citas
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState("Todos");
   const [filterEspecie, setFilterEspecie] = useState("Todas");
   const [filterFecha, setFilterFecha] = useState("");
 
-  // --- MODALES Y EDICIÓN ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Modales Citas
+  const [isCitaModalOpen, setIsCitaModalOpen] = useState(false);
   const [editingCitaId, setEditingCitaId] = useState(null);
   const [deleteCitaId, setDeleteCitaId] = useState(null);
 
-  // --- FORMULARIO ---
   const [formCita, setFormCita] = useState({
     mascota: "",
     especie: "Perro",
@@ -42,60 +40,6 @@ export default function Dashboard({ activePage, user }) {
     estado: "Pendiente",
   });
 
-  // --- ESTADOS DE MENSAJES ---
-const [formMensaje, setFormMensaje] = useState({
-  destinatario: "",
-  asunto: "",
-  descripcion: "",
-});
-const [sendingEmail, setSendingEmail] = useState(false);
-const [emailStatus, setEmailStatus] = useState(null); // 'success' | 'error' | null
-const [sentEmailTo, setSentEmailTo] = useState("");
-
-const handleSendEmail = async (e) => {
-  e.preventDefault();
-  setSendingEmail(true);
-  setEmailStatus(null);
-
-  // Sustituye estos 3 valores con las claves de tu cuenta de EmailJS
-  const SERVICE_ID = "service_zp9djbf";
-  const TEMPLATE_ID = "template_t5svfif";
-  const PUBLIC_KEY = "LiLG15pixNm_MuA9V";
-
- try {
-    // 1. Obtenemos la imagen aleatoria de perrito desde la API
-    const response = await fetch("https://dog.ceo/api/breeds/image/random");
-    const data = await response.json();
-    const dogImageUrl = data.message; // URL de la imagen del perrito
-
-    // 2. Preparamos los parámetros incluyendo dog_image
-    const templateParams = {
-      to_email: formMensaje.destinatario,
-      from_subject: formMensaje.asunto,
-      message: formMensaje.descripcion,
-      dog_image: dogImageUrl, // <--- Pasamos la URL a la plantilla
-    };
-
-  
-    await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
-    
-// Guardamos el correo exacto al que se envió antes de limpiar el form
-    setSentEmailTo(formMensaje.destinatario);
-    setEmailStatus("success");
-    setFormMensaje({
-      destinatario: "",
-      asunto: "",
-      descripcion: "",
-    });
-  } catch (error) {
-    console.error("Error al enviar el correo con EmailJS:", error);
-    setEmailStatus("error");
-  } finally {
-    setSendingEmail(false);
-  }
-};
-
-  // --- CARGA DE DATOS DESDE LA API ---
   useEffect(() => {
     if (activePage === "Citas") {
       loadCitas();
@@ -103,19 +47,18 @@ const handleSendEmail = async (e) => {
   }, [activePage]);
 
   const loadCitas = async () => {
-    setLoading(true);
+    setLoadingCitas(true);
     try {
       const data = await citasApi.getCitas();
       setCitas(data);
     } catch (error) {
       console.error("Error al cargar citas:", error);
     } finally {
-      setLoading(false);
+      setLoadingCitas(false);
     }
   };
 
-  // --- HANDLERS PARA ABRIR Y CERRAR MODAL ---
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateCitaModal = () => {
     setEditingCitaId(null);
     setFormCita({
       mascota: "",
@@ -125,26 +68,17 @@ const handleSendEmail = async (e) => {
       fecha: "",
       estado: "Pendiente",
     });
-    setIsModalOpen(true);
+    setIsCitaModalOpen(true);
   };
 
-  const handleOpenEditModal = (cita) => {
+  const handleOpenEditCitaModal = (cita) => {
     setEditingCitaId(cita.id);
-    setFormCita({
-      mascota: cita.mascota,
-      especie: cita.especie,
-      dueno: cita.dueno,
-      motivo: cita.motivo,
-      fecha: cita.fecha,
-      estado: cita.estado,
-    });
-    setIsModalOpen(true);
+    setFormCita({ ...cita });
+    setIsCitaModalOpen(true);
   };
 
-  // --- GUARDAR (CREAR O ACTUALIZAR) ---
   const handleSaveCita = async (e) => {
     e.preventDefault();
-
     if (!formCita.mascota.trim() || !formCita.dueno.trim() || !formCita.fecha) {
       alert("Por favor completa los campos obligatorios (*)");
       return;
@@ -152,58 +86,166 @@ const handleSendEmail = async (e) => {
 
     try {
       if (editingCitaId) {
-        // Actualizar en localStorage vía API
         const citaActualizada = await citasApi.updateCita(editingCitaId, formCita);
-        setCitas((prevCitas) =>
-          prevCitas.map((c) => (c.id === editingCitaId ? citaActualizada : c))
-        );
+        setCitas((prev) => prev.map((c) => (c.id === editingCitaId ? citaActualizada : c)));
       } else {
-        // Crear en localStorage vía API
         const nuevaCita = await citasApi.createCita(formCita);
-        setCitas((prevCitas) => [nuevaCita, ...prevCitas]);
+        setCitas((prev) => [nuevaCita, ...prev]);
       }
-
-      setIsModalOpen(false);
-      setFormCita({
-        mascota: "",
-        especie: "Perro",
-        dueno: "",
-        motivo: "",
-        fecha: "",
-        estado: "Pendiente",
-      });
+      setIsCitaModalOpen(false);
     } catch (error) {
       console.error("Error al guardar la cita:", error);
     }
   };
 
-  // --- ELIMINAR CITA ---
-  const handleConfirmDelete = async () => {
+  const handleConfirmDeleteCita = async () => {
     if (deleteCitaId) {
       await citasApi.deleteCita(deleteCitaId);
-      setCitas((prevCitas) => prevCitas.filter((c) => c.id !== deleteCitaId));
+      setCitas((prev) => prev.filter((c) => c.id !== deleteCitaId));
       setDeleteCitaId(null);
     }
   };
 
-  // --- FILTRADO DINÁMICO ---
   const filteredCitas = citas.filter((cita) => {
     const matchesSearch =
       cita.mascota.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cita.dueno.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesEstado =
-      filterEstado === "Todos" || cita.estado === filterEstado;
-
-    const matchesEspecie =
-      filterEspecie === "Todas" || cita.especie === filterEspecie;
-
-    const matchesFecha =
-      filterFecha === "" || cita.fecha === filterFecha;
-
+    const matchesEstado = filterEstado === "Todos" || cita.estado === filterEstado;
+    const matchesEspecie = filterEspecie === "Todas" || cita.especie === filterEspecie;
+    const matchesFecha = filterFecha === "" || cita.fecha === filterFecha;
     return matchesSearch && matchesEstado && matchesEspecie && matchesFecha;
   });
+  // --- MÓDULO DE USUARIOS ---
+  const [usuarios, setUsuarios] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [searchUser, setSearchUser] = useState("");
 
+  // Modales Usuarios
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [deleteUserId, setDeleteUserId] = useState(null);
+
+  const [userForm, setUserForm] = useState({
+    nombre: "",
+    email: "",
+    rol: "Veterinario",
+    telefono: "",
+    estado: "Activo",
+  });
+
+  // Petición condicional: solo carga usuarios al seleccionar la vista "Usuarios"
+  useEffect(() => {
+    if (activePage === "Usuarios" && usuarios.length === 0) {
+      fetchUsuarios();
+    }
+  }, [activePage]);
+
+  const fetchUsuarios = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await fetch("https://dummyjson.com/users?limit=5");
+      const data = await response.json();
+      const usuariosFormateados = data.users.map((u) => ({
+        id: u.id,
+        nombre: `${u.firstName} ${u.lastName}`,
+        email: u.email,
+        telefono: u.phone,
+        rol: u.company?.title || "Veterinario",
+        estado: "Activo",
+      }));
+      setUsuarios(usuariosFormateados);
+    } catch (error) {
+      console.error("Error al cargar usuarios de DummyJSON:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleOpenUserModal = (userToEdit = null) => {
+    if (userToEdit) {
+      setCurrentUser(userToEdit);
+      setUserForm({ ...userToEdit });
+    } else {
+      setCurrentUser(null);
+      setUserForm({
+        nombre: "",
+        email: "",
+        rol: "Veterinario",
+        telefono: "",
+        estado: "Activo",
+      });
+    }
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = (e) => {
+    e.preventDefault();
+    if (currentUser) {
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === currentUser.id ? { ...userForm, id: currentUser.id } : u))
+      );
+    } else {
+      setUsuarios((prev) => [{ ...userForm, id: Date.now() }, ...prev]);
+    }
+    setIsUserModalOpen(false);
+  };
+
+  const handleConfirmDeleteUser = () => {
+    if (deleteUserId) {
+      setUsuarios((prev) => prev.filter((u) => u.id !== deleteUserId));
+      setDeleteUserId(null);
+    }
+  };
+
+  const usuariosFiltrados = usuarios.filter(
+    (u) =>
+      u.nombre.toLowerCase().includes(searchUser.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+      u.rol.toLowerCase().includes(searchUser.toLowerCase())
+  );
+  // --- MÓDULO DE MENSAJES ---
+  const [formMensaje, setFormMensaje] = useState({
+    destinatario: "",
+    asunto: "",
+    descripcion: "",
+  });
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [sentEmailTo, setSentEmailTo] = useState("");
+
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    setSendingEmail(true);
+    setEmailStatus(null);
+
+    const SERVICE_ID = "service_zp9djbf";
+    const TEMPLATE_ID = "template_t5svfif";
+    const PUBLIC_KEY = "LiLG15pixNm_MuA9V";
+
+    try {
+      const response = await fetch("https://dog.ceo/api/breeds/image/random");
+      const data = await response.json();
+
+      const templateParams = {
+        to_email: formMensaje.destinatario,
+        from_subject: formMensaje.asunto,
+        message: formMensaje.descripcion,
+        dog_image: data.message,
+      };
+
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
+
+      setSentEmailTo(formMensaje.destinatario);
+      setEmailStatus("success");
+      setFormMensaje({ destinatario: "", asunto: "", descripcion: "" });
+    } catch (error) {
+      console.error("Error al enviar el correo con EmailJS:", error);
+      setEmailStatus("error");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+  // --- RENDERIZADO ---
   return (
     <section className="dashboard">
       {activePage === "Inicio" && (
@@ -213,7 +255,7 @@ const handleSendEmail = async (e) => {
         </>
       )}
 
-      {/* --- MÓDULO DE CITAS --- */}
+      {/* VISTA: CITAS */}
       {activePage === "Citas" && (
         <div className="citas-module">
           <header className="citas-header">
@@ -221,7 +263,7 @@ const handleSendEmail = async (e) => {
               <h1>Citas</h1>
               <p>Agenda, filtra y controla las citas de las mascotas.</p>
             </div>
-            <button className="btn-primary" onClick={handleOpenCreateModal}>
+            <button className="btn-primary" onClick={handleOpenCreateCitaModal}>
               <Plus size={18} /> Nueva Cita
             </button>
           </header>
@@ -239,10 +281,7 @@ const handleSendEmail = async (e) => {
 
             <div className="filter-box">
               <Filter size={16} />
-              <select
-                value={filterEstado}
-                onChange={(e) => setFilterEstado(e.target.value)}
-              >
+              <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)}>
                 <option value="Todos">Todos los estados</option>
                 <option value="Confirmada">Confirmada</option>
                 <option value="Pendiente">Pendiente</option>
@@ -252,10 +291,7 @@ const handleSendEmail = async (e) => {
             </div>
 
             <div className="filter-box">
-              <select
-                value={filterEspecie}
-                onChange={(e) => setFilterEspecie(e.target.value)}
-              >
+              <select value={filterEspecie} onChange={(e) => setFilterEspecie(e.target.value)}>
                 <option value="Todas">Todas las especies</option>
                 <option value="Perro">Perro</option>
                 <option value="Gato">Gato</option>
@@ -295,7 +331,7 @@ const handleSendEmail = async (e) => {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loadingCitas ? (
                   <tr>
                     <td colSpan="6" className="loading-state">
                       <div className="spinner-container">
@@ -319,9 +355,7 @@ const handleSendEmail = async (e) => {
                       <td>{cita.dueno}</td>
                       <td>{cita.motivo}</td>
                       <td>
-                        <span
-                          className={`badge badge-${cita.estado.toLowerCase()}`}
-                        >
+                        <span className={`badge badge-${cita.estado.toLowerCase()}`}>
                           {cita.estado}
                         </span>
                       </td>
@@ -330,7 +364,7 @@ const handleSendEmail = async (e) => {
                           <button
                             className="btn-icon btn-edit"
                             title="Editar cita"
-                            onClick={() => handleOpenEditModal(cita)}
+                            onClick={() => handleOpenEditCitaModal(cita)}
                           >
                             <Edit size={16} />
                           </button>
@@ -356,16 +390,13 @@ const handleSendEmail = async (e) => {
             </table>
           </div>
 
-          {/* MODAL CREAR / EDITAR CITA */}
-          {isModalOpen && (
+          {/* Modal Crear / Editar Cita */}
+          {isCitaModalOpen && (
             <div className="modal-overlay">
               <div className="modal-container">
                 <div className="modal-header">
                   <h2>{editingCitaId ? "Editar Cita" : "Agendar Nueva Cita"}</h2>
-                  <button
-                    className="btn-close-modal"
-                    onClick={() => setIsModalOpen(false)}
-                  >
+                  <button className="btn-close-modal" onClick={() => setIsCitaModalOpen(false)}>
                     <X size={20} />
                   </button>
                 </div>
@@ -378,9 +409,7 @@ const handleSendEmail = async (e) => {
                       required
                       placeholder="Ej. Firulais"
                       value={formCita.mascota}
-                      onChange={(e) =>
-                        setFormCita({ ...formCita, mascota: e.target.value })
-                      }
+                      onChange={(e) => setFormCita({ ...formCita, mascota: e.target.value })}
                     />
                   </div>
 
@@ -389,9 +418,7 @@ const handleSendEmail = async (e) => {
                       <label>Especie</label>
                       <select
                         value={formCita.especie}
-                        onChange={(e) =>
-                          setFormCita({ ...formCita, especie: e.target.value })
-                        }
+                        onChange={(e) => setFormCita({ ...formCita, especie: e.target.value })}
                       >
                         <option value="Perro">Perro</option>
                         <option value="Gato">Gato</option>
@@ -406,9 +433,7 @@ const handleSendEmail = async (e) => {
                         required
                         placeholder="Ej. Roberto Gómez"
                         value={formCita.dueno}
-                        onChange={(e) =>
-                          setFormCita({ ...formCita, dueno: e.target.value })
-                        }
+                        onChange={(e) => setFormCita({ ...formCita, dueno: e.target.value })}
                       />
                     </div>
                   </div>
@@ -420,9 +445,7 @@ const handleSendEmail = async (e) => {
                         type="date"
                         required
                         value={formCita.fecha}
-                        onChange={(e) =>
-                          setFormCita({ ...formCita, fecha: e.target.value })
-                        }
+                        onChange={(e) => setFormCita({ ...formCita, fecha: e.target.value })}
                       />
                     </div>
 
@@ -430,9 +453,7 @@ const handleSendEmail = async (e) => {
                       <label>Estado</label>
                       <select
                         value={formCita.estado}
-                        onChange={(e) =>
-                          setFormCita({ ...formCita, estado: e.target.value })
-                        }
+                        onChange={(e) => setFormCita({ ...formCita, estado: e.target.value })}
                       >
                         <option value="Pendiente">Pendiente</option>
                         <option value="Confirmada">Confirmada</option>
@@ -448,9 +469,7 @@ const handleSendEmail = async (e) => {
                       type="text"
                       placeholder="Ej. Chequeo de rutina, Vacunación..."
                       value={formCita.motivo}
-                      onChange={(e) =>
-                        setFormCita({ ...formCita, motivo: e.target.value })
-                      }
+                      onChange={(e) => setFormCita({ ...formCita, motivo: e.target.value })}
                     />
                   </div>
 
@@ -458,7 +477,7 @@ const handleSendEmail = async (e) => {
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={() => setIsCitaModalOpen(false)}
                     >
                       Cancelar
                     </button>
@@ -471,29 +490,196 @@ const handleSendEmail = async (e) => {
             </div>
           )}
 
-          {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
           <ConfirmModal
             isOpen={Boolean(deleteCitaId)}
-            title="¿Eliminar cita médica?"
+            title="¿Eliminar cita?"
             message="Esta cita se eliminará permanentemente de la lista."
-            onConfirm={handleConfirmDelete}
+            onConfirm={handleConfirmDeleteCita}
             onClose={() => setDeleteCitaId(null)}
           />
         </div>
       )}
 
+      {/* VISTA: USUARIOS */}
       {activePage === "Usuarios" && (
-        <>
-          <h1>Gestión de usuarios</h1>
-          <p>Aquí se integrará la tabla CRUD.</p>
-        </>
+        <div className="citas-module">
+          <header className="citas-header">
+            <div>
+              <h1>Usuarios</h1>
+              <p>Administra el personal, veterinarios y permisos del sistema VetCare.</p>
+            </div>
+            <button className="btn-primary" onClick={() => handleOpenUserModal()}>
+              <Plus size={18} /> Nuevo Usuario
+            </button>
+          </header>
+
+          <div className="citas-toolbar">
+            <div className="search-box">
+              <Search className="search-icon" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar usuario por nombre, email o rol..."
+                value={searchUser}
+                onChange={(e) => setSearchUser(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="table-container">
+            <table className="citas-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Teléfono</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingUsers ? (
+                  <tr>
+                    <td colSpan="6" className="loading-state">
+                      <div className="spinner-container">
+                        <Loader2 size={20} className="spinner" /> Cargando usuarios desde la API...
+                      </div>
+                    </td>
+                  </tr>
+                ) : usuariosFiltrados.length > 0 ? (
+                  usuariosFiltrados.map((u) => (
+                    <tr key={u.id}>
+                      <td><strong>{u.nombre}</strong></td>
+                      <td>{u.email}</td>
+                      <td>{u.telefono}</td>
+                      <td>
+                        <span className="badge badge-atendido">{u.rol}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${u.estado === "Activo" ? "badge-confirmada" : "badge-cancelada"}`}>
+                          {u.estado}
+                        </span>
+                      </td>
+                      <td className="actions-cell">
+                        <button className="btn-icon btn-edit" title="Editar" onClick={() => handleOpenUserModal(u)}>
+                          <Edit size={16} />
+                        </button>
+                        <button className="btn-icon btn-delete" title="Eliminar" onClick={() => setDeleteUserId(u.id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="empty-state">
+                      No se encontraron usuarios registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Modal Crear / Editar Usuario */}
+          {isUserModalOpen && (
+            <div className="modal-overlay">
+              <div className="modal-container">
+                <div className="modal-header">
+                  <h2>{currentUser ? "Editar Usuario" : "Nuevo Usuario"}</h2>
+                  <button className="btn-close-modal" onClick={() => setIsUserModalOpen(false)}>
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveUser} className="modal-form">
+                  <div className="form-group">
+                    <label>Nombre Completo *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Dr. Roberto Gómez"
+                      value={userForm.nombre}
+                      onChange={(e) => setUserForm({ ...userForm, nombre: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Correo Electrónico *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="ejemplo@vetcare.com"
+                      value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Teléfono *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="555-0000"
+                        value={userForm.telefono}
+                        onChange={(e) => setUserForm({ ...userForm, telefono: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Rol *</label>
+                      <select
+                        value={userForm.rol}
+                        onChange={(e) => setUserForm({ ...userForm, rol: e.target.value })}
+                      >
+                        <option value="Veterinario">Veterinario</option>
+                        <option value="Recepcionista">Recepcionista</option>
+                        <option value="Administrador">Administrador</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Estado *</label>
+                    <select
+                      value={userForm.estado}
+                      onChange={(e) => setUserForm({ ...userForm, estado: e.target.value })}
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                    </select>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setIsUserModalOpen(false)}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      {currentUser ? "Guardar Cambios" : "Crear Usuario"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          <ConfirmModal
+            isOpen={Boolean(deleteUserId)}
+            title="¿Eliminar usuario?"
+            message="Este usuario se eliminará permanentemente del sistema VetCare."
+            onConfirm={handleConfirmDeleteUser}
+            onClose={() => setDeleteUserId(null)}
+          />
+        </div>
       )}
 
+      {/* VISTA: MENSAJES */}
       {activePage === "Mensajes" && (
         <div className="citas-module">
           <header className="citas-header">
             <div>
-              <h1>Envio de Correos</h1>
+              <h1>Envío de Correos</h1>
               <p>Notifica a tus clientes enviando mensajes mediante correo.</p>
             </div>
           </header>
@@ -501,7 +687,7 @@ const handleSendEmail = async (e) => {
           <div style={{ maxWidth: "600px", margin: "20px 0" }}>
             {emailStatus === "success" && (
               <div style={{ padding: "12px", backgroundColor: "#d4edda", color: "#155724", borderRadius: "8px", marginBottom: "15px" }}>
-                ¡Correo enviado con éxito a <strong>{sentEmailTo}</strong>!
+                ¡Correo enviado con éxito a <strong>{sentEmailTo}</strong>! 🎉
               </div>
             )}
 
@@ -511,7 +697,11 @@ const handleSendEmail = async (e) => {
               </div>
             )}
 
-            <form onSubmit={handleSendEmail} className="modal-form" style={{ background: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+            <form
+              onSubmit={handleSendEmail}
+              className="modal-form"
+              style={{ background: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb" }}
+            >
               <div className="form-group">
                 <label>Correo Destinatario *</label>
                 <input
