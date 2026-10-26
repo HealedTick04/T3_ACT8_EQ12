@@ -90,10 +90,14 @@
   border-radius: 8px;
   font-size: 14px;
   outline: none;
+  background-color: #ffffff !important; /* Fondo blanco */
+  color: #1e3a8a !important;            /* Texto azul marino al escribir */
+  font-weight: 500;
 }
 
 .search-box input:focus {
-  border-color: #0284c7;
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
 }
 
 .search-icon {
@@ -104,12 +108,17 @@
   color: #94a3b8;
 }
 
+.search-box input::placeholder {
+  color: #94a3b8; /* Placeholder en gris suave */
+}
+
+/* Selects y Filtro de Fecha */
 /* Selects y Filtro de Fecha */
 .filter-box {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #ffffff;
+  background-color: #ffffff !important; /* Fondo blanco */
   border: 1px solid #cbd5e1;
   padding: 0 10px;
   border-radius: 8px;
@@ -124,6 +133,8 @@
   outline: none;
   cursor: pointer;
   color: #334155;
+  color: #1e3a8a !important;            /* Texto e icono de fecha en azul marino */
+  font-weight: 500;
 }
 
 .btn-clear-date {
@@ -320,17 +331,28 @@
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
+  background-color: #ffffff !important; /* Fondo totalmente blanco */
+  color: #1e3a8a !important;            /* Texto escrito en color azul marino */
+  font-weight: 500;
 }
 
 .form-group input:focus,
-.form-group select:focus {
-  border-color: #0284c7;
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #94a3b8; /* Mantiene las sugerencias (placeholders) en un gris suave */
 }
 
 .form-row {

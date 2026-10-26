@@ -10,6 +10,8 @@ import {
   PanelLeftOpen,
   ChevronRight,
   Sparkles,
+  LogOut,
+  Mail,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -17,6 +19,7 @@ const menuItems = [
   { id: "Inicio", label: "Inicio", icon: LayoutDashboard },
   { id: "Citas", label: "Citas", icon: Calendar },
   { id: "Usuarios", label: "Usuarios", icon: Users },
+  { id: "Mensajes", label: "Mensajes", icon: Mail },
   { id: "Configuración", label: "Configuración", icon: Settings },
 ];
 

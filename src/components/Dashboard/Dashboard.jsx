@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
+import emailjs from "@emailjs/browser";
 import { citasApi } from "/src/services/citasApi";
 import ConfirmModal from "../ConfirmModal/ConfirmModal";
 import {
@@ -11,6 +12,7 @@ import {
   Trash2,
   X,
   Loader2,
+  Send,
 } from "lucide-react";
 // Datos de prueba iniciales sin api
 // Datos de prueba iniciales
@@ -39,6 +41,59 @@ export default function Dashboard({ activePage, user }) {
     fecha: "",
     estado: "Pendiente",
   });
+
+  // --- ESTADOS DE MENSAJES ---
+const [formMensaje, setFormMensaje] = useState({
+  destinatario: "",
+  asunto: "",
+  descripcion: "",
+});
+const [sendingEmail, setSendingEmail] = useState(false);
+const [emailStatus, setEmailStatus] = useState(null); // 'success' | 'error' | null
+const [sentEmailTo, setSentEmailTo] = useState("");
+
+const handleSendEmail = async (e) => {
+  e.preventDefault();
+  setSendingEmail(true);
+  setEmailStatus(null);
+
+  // Sustituye estos 3 valores con las claves de tu cuenta de EmailJS
+  const SERVICE_ID = "service_zp9djbf";
+  const TEMPLATE_ID = "template_t5svfif";
+  const PUBLIC_KEY = "LiLG15pixNm_MuA9V";
+
+ try {
+    // 1. Obtenemos la imagen aleatoria de perrito desde la API
+    const response = await fetch("https://dog.ceo/api/breeds/image/random");
+    const data = await response.json();
+    const dogImageUrl = data.message; // URL de la imagen del perrito
+
+    // 2. Preparamos los parámetros incluyendo dog_image
+    const templateParams = {
+      to_email: formMensaje.destinatario,
+      from_subject: formMensaje.asunto,
+      message: formMensaje.descripcion,
+      dog_image: dogImageUrl, // <--- Pasamos la URL a la plantilla
+    };
+
+  
+    await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
+    
+// Guardamos el correo exacto al que se envió antes de limpiar el form
+    setSentEmailTo(formMensaje.destinatario);
+    setEmailStatus("success");
+    setFormMensaje({
+      destinatario: "",
+      asunto: "",
+      descripcion: "",
+    });
+  } catch (error) {
+    console.error("Error al enviar el correo con EmailJS:", error);
+    setEmailStatus("error");
+  } finally {
+    setSendingEmail(false);
+  }
+};
 
   // --- CARGA DE DATOS DESDE LA API ---
   useEffect(() => {
@@ -163,7 +218,7 @@ export default function Dashboard({ activePage, user }) {
         <div className="citas-module">
           <header className="citas-header">
             <div>
-              <h1>Gestión de Citas Médicas</h1>
+              <h1>Citas</h1>
               <p>Agenda, filtra y controla las citas de las mascotas.</p>
             </div>
             <button className="btn-primary" onClick={handleOpenCreateModal}>
@@ -426,12 +481,90 @@ export default function Dashboard({ activePage, user }) {
           />
         </div>
       )}
-      
+
       {activePage === "Usuarios" && (
         <>
           <h1>Gestión de usuarios</h1>
           <p>Aquí se integrará la tabla CRUD.</p>
         </>
+      )}
+
+      {activePage === "Mensajes" && (
+        <div className="citas-module">
+          <header className="citas-header">
+            <div>
+              <h1>Envio de Correos</h1>
+              <p>Notifica a tus clientes enviando mensajes mediante correo.</p>
+            </div>
+          </header>
+
+          <div style={{ maxWidth: "600px", margin: "20px 0" }}>
+            {emailStatus === "success" && (
+              <div style={{ padding: "12px", backgroundColor: "#d4edda", color: "#155724", borderRadius: "8px", marginBottom: "15px" }}>
+                ¡Correo enviado con éxito a <strong>{sentEmailTo}</strong>!
+              </div>
+            )}
+
+            {emailStatus === "error" && (
+              <div style={{ padding: "12px", backgroundColor: "#f8d7da", color: "#721c24", borderRadius: "8px", marginBottom: "15px" }}>
+                Hubo un error al enviar el correo. Por favor reintenta. ❌
+              </div>
+            )}
+
+            <form onSubmit={handleSendEmail} className="modal-form" style={{ background: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+              <div className="form-group">
+                <label>Correo Destinatario *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ejemplo@correo.com"
+                  value={formMensaje.destinatario}
+                  onChange={(e) => setFormMensaje({ ...formMensaje, destinatario: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Asunto del Correo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Recordatorio de cita médica"
+                  value={formMensaje.asunto}
+                  onChange={(e) => setFormMensaje({ ...formMensaje, asunto: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Descripción / Mensaje *</label>
+                <textarea
+                  required
+                  rows="5"
+                  placeholder="Escribe aquí el contenido de tu mensaje..."
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db", resize: "vertical" }}
+                  value={formMensaje.descripcion}
+                  onChange={(e) => setFormMensaje({ ...formMensaje, descripcion: e.target.value })}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={sendingEmail}
+                style={{ width: "100%", marginTop: "10px", justifyContent: "center" }}
+              >
+                {sendingEmail ? (
+                  <>
+                    <Loader2 size={18} className="spinner" /> Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} /> Enviar Mensaje
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
 
       {activePage === "Configuración" && (
