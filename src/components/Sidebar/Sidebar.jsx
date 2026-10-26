@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
+  Calendar, // <--- 1. Importamos el icono de Calendario
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -14,11 +15,12 @@ import "./Sidebar.css";
 
 const menuItems = [
   { id: "Inicio", label: "Inicio", icon: LayoutDashboard },
+  { id: "Citas", label: "Citas", icon: Calendar },
   { id: "Usuarios", label: "Usuarios", icon: Users },
   { id: "Configuración", label: "Configuración", icon: Settings },
 ];
 
-export default function Sidebar({ activePage, setActivePage }) {
+export default function Sidebar({ activePage, onNavigate }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -66,7 +68,7 @@ export default function Sidebar({ activePage, setActivePage }) {
             className={`menu-item ${
               activePage === id ? "menu-item-active" : ""
             }`}
-            onClick={() => setActivePage(id)}
+            onClick={() => onNavigate(id)}
             title={collapsed ? label : undefined}
             aria-current={activePage === id ? "page" : undefined}
           >
