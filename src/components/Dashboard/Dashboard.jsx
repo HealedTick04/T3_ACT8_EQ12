@@ -26,6 +26,10 @@ export default function Dashboard({ activePage, user }) {
   const [filterEspecie, setFilterEspecie] = useState("Todas");
   const [filterFecha, setFilterFecha] = useState("");
 
+  // --- ESTADOS DE PAGINACIÓN PARA CITAS ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [citasPerPage, setCitasPerPage] = useState(5);
+
   // Modales Citas
   const [isCitaModalOpen, setIsCitaModalOpen] = useState(false);
   const [editingCitaId, setEditingCitaId] = useState(null);
@@ -39,6 +43,27 @@ export default function Dashboard({ activePage, user }) {
     fecha: "",
     estado: "Pendiente",
   });
+
+  const filteredCitas = citas.filter((cita) => {
+    const matchesSearch =
+      cita.mascota.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cita.dueno.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesEstado = filterEstado === "Todos" || cita.estado === filterEstado;
+    const matchesEspecie = filterEspecie === "Todas" || cita.especie === filterEspecie;
+    const matchesFecha = filterFecha === "" || cita.fecha === filterFecha;
+    return matchesSearch && matchesEstado && matchesEspecie && matchesFecha;
+  });
+
+  // paginacion
+  const indexOfLastCita = currentPage * citasPerPage;
+  const indexOfFirstCita = indexOfLastCita - citasPerPage;
+  const currentCitas = filteredCitas.slice(indexOfFirstCita, indexOfLastCita);
+  const totalPages = Math.ceil(filteredCitas.length / citasPerPage);
+
+  // Resetear a página 1 cuando cambian filtros o cantidad por página
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterEstado, filterEspecie, filterFecha, citasPerPage]);
 
   useEffect(() => {
     if (activePage === "Citas") {
@@ -105,20 +130,14 @@ export default function Dashboard({ activePage, user }) {
       setDeleteCitaId(null);
     }
   };
-
-  const filteredCitas = citas.filter((cita) => {
-    const matchesSearch =
-      cita.mascota.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cita.dueno.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEstado = filterEstado === "Todos" || cita.estado === filterEstado;
-    const matchesEspecie = filterEspecie === "Todas" || cita.especie === filterEspecie;
-    const matchesFecha = filterFecha === "" || cita.fecha === filterFecha;
-    return matchesSearch && matchesEstado && matchesEspecie && matchesFecha;
-  });
   // --- MÓDULO DE USUARIOS ---
   const [usuarios, setUsuarios] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchUser, setSearchUser] = useState("");
+
+  // Paginación Usuarios
+  const [currentUsersPage, setCurrentUsersPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState(5);
 
   // Modales Usuarios
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -133,9 +152,25 @@ export default function Dashboard({ activePage, user }) {
     estado: "Activo",
   });
 
+  const usuariosFiltrados = usuarios.filter(
+    (u) =>
+      u.nombre.toLowerCase().includes(searchUser.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
+      u.rol.toLowerCase().includes(searchUser.toLowerCase())
+  );
+
+  const indexOfLastUser = currentUsersPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsuarios = usuariosFiltrados.slice(indexOfFirstUser, indexOfLastUser);
+  const totalUsersPages = Math.ceil(usuariosFiltrados.length / usersPerPage);
+
+  useEffect(() => {
+    setCurrentUsersPage(1);
+  }, [searchUser, usersPerPage]);
+
   // Petición condicional: solo carga usuarios al seleccionar la vista "Usuarios"
   useEffect(() => {
-    if (activePage === "Usuarios" && usuarios.length === 0) {
+    if (activePage === "Usuarios") {
       fetchUsuarios();
     }
   }, [activePage]);
@@ -143,7 +178,7 @@ export default function Dashboard({ activePage, user }) {
   const fetchUsuarios = async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetch("https://dummyjson.com/users?limit=5");
+      const response = await fetch("https://dummyjson.com/users?limit=40");
       const data = await response.json();
       const usuariosFormateados = data.users.map((u) => ({
         id: u.id,
@@ -197,12 +232,6 @@ export default function Dashboard({ activePage, user }) {
     }
   };
 
-  const usuariosFiltrados = usuarios.filter(
-    (u) =>
-      u.nombre.toLowerCase().includes(searchUser.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchUser.toLowerCase()) ||
-      u.rol.toLowerCase().includes(searchUser.toLowerCase())
-  );
   // --- MÓDULO DE MENSAJES ---
   const [formMensaje, setFormMensaje] = useState({
     destinatario: "",
@@ -340,8 +369,8 @@ export default function Dashboard({ activePage, user }) {
                       </div>
                     </td>
                   </tr>
-                ) : filteredCitas.length > 0 ? (
-                  filteredCitas.map((cita) => (
+                ) : currentCitas.length > 0 ? (
+                  currentCitas.map((cita) => (
                     <tr key={cita.id}>
                       <td>
                         <div className="date-badge">
@@ -388,6 +417,56 @@ export default function Dashboard({ activePage, user }) {
                 )}
               </tbody>
             </table>
+          </div>
+          {/* CONTROLES DE PAGINACIÓN */}
+          <div className="pagination-container">
+            {/* Izquierda: Selector de registros por página */}
+            <div className="pagination-limit">
+              <label htmlFor="itemsPerPage">Mostrar:</label>
+              <select
+                id="itemsPerPage"
+                value={citasPerPage}
+                onChange={(e) => setCitasPerPage(Number(e.target.value))}
+              >
+                <option value={5}>5 registros</option>
+                <option value={10}>10 registros</option>
+                <option value={15}>15 registros</option>
+                <option value={20}>20 registros</option>
+              </select>
+              <span className="pagination-info">
+                Mostrando {filteredCitas.length > 0 ? indexOfFirstCita + 1 : 0} -{" "}
+                {Math.min(indexOfLastCita, filteredCitas.length)} de {filteredCitas.length}
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <div className="pagination-buttons">
+                <button
+                  className="btn-page"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => prev - 1)}
+                >
+                  &laquo; Ant
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => (
+                  <button
+                    key={number}
+                    className={`btn-page ${currentPage === number ? "active" : ""}`}
+                    onClick={() => setCurrentPage(number)}
+                  >
+                    {number}
+                  </button>
+                ))}
+
+                <button
+                  className="btn-page"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                >
+                  Sig &raquo;
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Modal Crear / Editar Cita */}
@@ -542,12 +621,13 @@ export default function Dashboard({ activePage, user }) {
                   <tr>
                     <td colSpan="6" className="loading-state">
                       <div className="spinner-container">
-                        <Loader2 size={20} className="spinner" /> Cargando usuarios desde la API...
+                        <Loader2 size={24} className="spinner" />
+                        <span>Cargando usuarios...</span>
                       </div>
                     </td>
                   </tr>
-                ) : usuariosFiltrados.length > 0 ? (
-                  usuariosFiltrados.map((u) => (
+                ) : currentUsuarios.length > 0 ? (
+                  currentUsuarios.map((u) => (
                     <tr key={u.id}>
                       <td><strong>{u.nombre}</strong></td>
                       <td>{u.email}</td>
@@ -579,6 +659,56 @@ export default function Dashboard({ activePage, user }) {
                 )}
               </tbody>
             </table>
+          </div>
+          {/* CONTROLES DE PAGINACIÓN DE USUARIOS */}
+          <div className="pagination-container">
+            <div className="pagination-limit">
+              <label htmlFor="usersPerPage">Mostrar:</label>
+              <select
+                id="usersPerPage"
+                value={usersPerPage}
+                onChange={(e) => setUsersPerPage(Number(e.target.value))}
+              >
+                <option value={5}>5 registros</option>
+                <option value={10}>10 registros</option>
+                <option value={15}>15 registros</option>
+                <option value={20}>20 registros</option>
+              </select>
+              <span className="pagination-info">
+                Mostrando {usuariosFiltrados.length > 0 ? indexOfFirstUser + 1 : 0} -{" "}
+                {Math.min(indexOfLastUser, usuariosFiltrados.length)} de {usuariosFiltrados.length}
+              </span>
+            </div>
+
+            {totalUsersPages > 1 && (
+              <div className="pagination-buttons">
+                <button
+                  className="btn-page"
+                  disabled={currentUsersPage === 1}
+                  onClick={() => setCurrentUsersPage((prev) => prev - 1)}
+                >
+                  &laquo; Ant
+                </button>
+
+                {Array.from({ length: totalUsersPages }, (_, index) => index + 1).map((number) => (
+                  <button
+                    key={number}
+                    className={`btn-page ${currentUsersPage === number ? "active" : ""}`}
+                    onClick={() => setCurrentUsersPage(number)}
+                  >
+                    {number}
+                  </button>
+                ))}
+
+                <button
+                  className="btn-page"
+                  disabled={currentUsersPage === totalUsersPages}
+                  onClick={() => setCurrentUsersPage((prev) => prev + 1)}
+                >
+                  Sig &raquo;
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Modal Crear / Editar Usuario */}
