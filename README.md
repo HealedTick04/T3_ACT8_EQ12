@@ -1,5 +1,18 @@
 # React + Vite
 
+## Integrantes:
+Rojas Garcia Fernando
+Antonio Peña Jose Angel
+
+## Apis elegidas:
+
+Implementado en la parte del Login y en el sidebar en usuarios
+https://dummyjson.com/users
+
+Implementado en envio de correo electronico
+https://dog.ceo/api/breeds/image/random
+
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
