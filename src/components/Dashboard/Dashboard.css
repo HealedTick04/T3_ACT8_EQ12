@@ -361,3 +361,31 @@
 .btn-secondary:hover {
   background: #f1f5f9;
 }
+
+/* --- ESTADO DE CARGA SPINNER --- */
+.loading-state {
+  text-align: center;
+  padding: 40px !important;
+  color: #0284c7;
+  font-weight: 500;
+}
+
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

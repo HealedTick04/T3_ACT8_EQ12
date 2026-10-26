@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
+import { citasApi } from "/src/services/citasApi";
+import ConfirmModal from "../ConfirmModal/ConfirmModal";
 import {
   Plus,
   Search,
@@ -8,61 +10,27 @@ import {
   Edit,
   Trash2,
   X,
+  Loader2,
 } from "lucide-react";
 // Datos de prueba iniciales sin api
 // Datos de prueba iniciales
-const initialCitas = [
-  {
-    id: 1,
-    fecha: "2026-10-28",
-    mascota: "Max",
-    especie: "Perro",
-    dueno: "Carlos Mendoza",
-    motivo: "Vacunación anual",
-    estado: "Confirmada",
-  },
-  {
-    id: 2,
-    fecha: "2026-10-28",
-    mascota: "Luna",
-    especie: "Gato",
-    dueno: "Ana María Torres",
-    motivo: "Revisión general",
-    estado: "Pendiente",
-  },
-  {
-    id: 3,
-    fecha: "2026-10-29",
-    mascota: "Tambor",
-    especie: "Conejo",
-    dueno: "Sofia López",
-    motivo: "Corte de uñas",
-    estado: "Atendido",
-  },
-  {
-    id: 4,
-    fecha: "2026-10-30",
-    mascota: "Rocky",
-    especie: "Perro",
-    dueno: "Luis Gómez",
-    motivo: "Limpieza dental",
-    estado: "Cancelada",
-  },
-];
-
 export default function Dashboard({ activePage, user }) {
- const [citas, setCitas] = useState(initialCitas);
+  // --- ESTADOS PRINCIPALES DE CITAS ---
+  const [citas, setCitas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Estados de Filtros
+  // --- FILTROS ---
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState("Todos");
   const [filterEspecie, setFilterEspecie] = useState("Todas");
   const [filterFecha, setFilterFecha] = useState("");
 
-  // Estado del Modal y Cita en edición
+  // --- MODALES Y EDICIÓN ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null); // null = Crear, número = Editar
+  const [editingCitaId, setEditingCitaId] = useState(null);
+  const [deleteCitaId, setDeleteCitaId] = useState(null);
 
+  // --- FORMULARIO ---
   const [formCita, setFormCita] = useState({
     mascota: "",
     especie: "Perro",
@@ -72,9 +40,28 @@ export default function Dashboard({ activePage, user }) {
     estado: "Pendiente",
   });
 
-  // Abrir modal en modo "Nueva Cita"
+  // --- CARGA DE DATOS DESDE LA API ---
+  useEffect(() => {
+    if (activePage === "Citas") {
+      loadCitas();
+    }
+  }, [activePage]);
+
+  const loadCitas = async () => {
+    setLoading(true);
+    try {
+      const data = await citasApi.getCitas();
+      setCitas(data);
+    } catch (error) {
+      console.error("Error al cargar citas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- HANDLERS PARA ABRIR Y CERRAR MODAL ---
   const handleOpenCreateModal = () => {
-    setEditingId(null);
+    setEditingCitaId(null);
     setFormCita({
       mascota: "",
       especie: "Perro",
@@ -86,9 +73,8 @@ export default function Dashboard({ activePage, user }) {
     setIsModalOpen(true);
   };
 
-  // Abrir modal en modo "Editar Cita"
   const handleOpenEditModal = (cita) => {
-    setEditingId(cita.id);
+    setEditingCitaId(cita.id);
     setFormCita({
       mascota: cita.mascota,
       especie: cita.especie,
@@ -100,41 +86,52 @@ export default function Dashboard({ activePage, user }) {
     setIsModalOpen(true);
   };
 
-  // Eliminar cita
-  const handleDeleteCita = (id) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta cita?")) {
-      setCitas(citas.filter((cita) => cita.id !== id));
-    }
-  };
-
-  // Guardar (Crear o Actualizar)
-  const handleSaveCita = (e) => {
+  // --- GUARDAR (CREAR O ACTUALIZAR) ---
+  const handleSaveCita = async (e) => {
     e.preventDefault();
-    if (!formCita.mascota || !formCita.dueno || !formCita.fecha) {
-      alert("Por favor completa los campos obligatorios.");
+
+    if (!formCita.mascota.trim() || !formCita.dueno.trim() || !formCita.fecha) {
+      alert("Por favor completa los campos obligatorios (*)");
       return;
     }
 
-    if (editingId) {
-      // Modo Edición: Actualizar la cita existente
-      setCitas(
-        citas.map((cita) =>
-          cita.id === editingId ? { ...cita, ...formCita } : cita
-        )
-      );
-    } else {
-      // Modo Creación: Agregar nueva cita
-      const newCita = {
-        id: Date.now(),
-        ...formCita,
-      };
-      setCitas([newCita, ...citas]);
-    }
+    try {
+      if (editingCitaId) {
+        // Actualizar en localStorage vía API
+        const citaActualizada = await citasApi.updateCita(editingCitaId, formCita);
+        setCitas((prevCitas) =>
+          prevCitas.map((c) => (c.id === editingCitaId ? citaActualizada : c))
+        );
+      } else {
+        // Crear en localStorage vía API
+        const nuevaCita = await citasApi.createCita(formCita);
+        setCitas((prevCitas) => [nuevaCita, ...prevCitas]);
+      }
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+      setFormCita({
+        mascota: "",
+        especie: "Perro",
+        dueno: "",
+        motivo: "",
+        fecha: "",
+        estado: "Pendiente",
+      });
+    } catch (error) {
+      console.error("Error al guardar la cita:", error);
+    }
   };
 
-  // Filtrado dinámico
+  // --- ELIMINAR CITA ---
+  const handleConfirmDelete = async () => {
+    if (deleteCitaId) {
+      await citasApi.deleteCita(deleteCitaId);
+      setCitas((prevCitas) => prevCitas.filter((c) => c.id !== deleteCitaId));
+      setDeleteCitaId(null);
+    }
+  };
+
+  // --- FILTRADO DINÁMICO ---
   const filteredCitas = citas.filter((cita) => {
     const matchesSearch =
       cita.mascota.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -156,11 +153,12 @@ export default function Dashboard({ activePage, user }) {
     <section className="dashboard">
       {activePage === "Inicio" && (
         <>
-          <h1>Bienvenido, {user.firstName}</h1>
-          <p>Has iniciado sesión correctamente.</p>
+          <h1>Bienvenido, {user?.firstName || "Usuario"}</h1>
+          <p>Has iniciado sesión correctamente en VetCare.</p>
         </>
       )}
 
+      {/* --- MÓDULO DE CITAS --- */}
       {activePage === "Citas" && (
         <div className="citas-module">
           <header className="citas-header">
@@ -242,7 +240,16 @@ export default function Dashboard({ activePage, user }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredCitas.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="loading-state">
+                      <div className="spinner-container">
+                        <Loader2 size={24} className="spinner" />
+                        <span>Cargando citas...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredCitas.length > 0 ? (
                   filteredCitas.map((cita) => (
                     <tr key={cita.id}>
                       <td>
@@ -275,7 +282,7 @@ export default function Dashboard({ activePage, user }) {
                           <button
                             className="btn-icon btn-delete"
                             title="Eliminar cita"
-                            onClick={() => handleDeleteCita(cita.id)}
+                            onClick={() => setDeleteCitaId(cita.id)}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -294,11 +301,12 @@ export default function Dashboard({ activePage, user }) {
             </table>
           </div>
 
+          {/* MODAL CREAR / EDITAR CITA */}
           {isModalOpen && (
             <div className="modal-overlay">
               <div className="modal-container">
                 <div className="modal-header">
-                  <h2>{editingId ? "Editar Cita" : "Agendar Nueva Cita"}</h2>
+                  <h2>{editingCitaId ? "Editar Cita" : "Agendar Nueva Cita"}</h2>
                   <button
                     className="btn-close-modal"
                     onClick={() => setIsModalOpen(false)}
@@ -400,16 +408,25 @@ export default function Dashboard({ activePage, user }) {
                       Cancelar
                     </button>
                     <button type="submit" className="btn-primary">
-                      {editingId ? "Actualizar Cita" : "Guardar Cita"}
+                      {editingCitaId ? "Actualizar Cita" : "Guardar Cita"}
                     </button>
                   </div>
                 </form>
               </div>
             </div>
           )}
+
+          {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+          <ConfirmModal
+            isOpen={Boolean(deleteCitaId)}
+            title="¿Eliminar cita médica?"
+            message="Esta cita se eliminará permanentemente de la lista."
+            onConfirm={handleConfirmDelete}
+            onClose={() => setDeleteCitaId(null)}
+          />
         </div>
       )}
-
+      
       {activePage === "Usuarios" && (
         <>
           <h1>Gestión de usuarios</h1>
