@@ -1,16 +1,28 @@
 # React + Vite
 
 ## Integrantes:
-Rojas Garcia Fernando
-Antonio Peña Jose Angel
+1. **Rojas Garcia Fernando
+2. **Antonio Peña Jose Angel
 
 ## Apis elegidas:
 
-Implementado en la parte del Login y en el sidebar en usuarios
-https://dummyjson.com/users
+Este proyecto se integra con las siguientes APIs REST y servicios web:
 
-Implementado en envio de correo electronico
-https://dog.ceo/api/breeds/image/random
+1. **EmailJS API** (`https://api.emailjs.com`)
+   - **Uso:** Envío real de notificaciones y mensajes por correo electrónico a los clientes.
+   - **Módulo:** Mensajes.
+
+2. **Dog CEO API** (`https://dog.ceo/api/breeds/image/random`)
+   - **Uso:** Obtención dinámica de imágenes aleatorias de perritos para adjuntarlas visualmente en las plantillas de los correos enviados.
+   - **Módulo:** Mensajes.
+
+3. **DummyJSON Users API** (`https://dummyjson.com/users?limit=5`)
+   - **Uso:** Carga inicial de datos reales de prueba para la simulación y prueba de la tabla CRUD de usuarios (nombre, correo, teléfono y puesto).
+   - **Módulo:** Usuarios.
+
+4. **API Interna / LocalStorage (citasApi)**
+   - **Uso:** Persistencia y gestión simulada de peticiones HTTP (GET, POST, PUT, DELETE) para el control completo de las citas médicas.
+   - **Módulo:** Citas
 
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
