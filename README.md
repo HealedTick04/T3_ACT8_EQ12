@@ -24,6 +24,8 @@ Este proyecto se integra con las siguientes APIs REST y servicios web:
    - **Uso:** Persistencia y gestión simulada de peticiones HTTP (GET, POST, PUT, DELETE) para el control completo de las citas médicas.
    - **Módulo:** Citas
 
+## Proyecto desplegado
+**https://t3-act8-eq12.rojasgarciafernando2.workers.dev
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
